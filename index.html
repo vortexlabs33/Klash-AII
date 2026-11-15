@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KLASH AI — Powered by KLASH WORLD</title>
+    <!-- Marked.js for professional Markdown formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- PDF.js CDN for parsing uploaded PDF files directly in browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --chat-bg: #111827;
+            --panel-bg: #1f2937;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --user-bubble: #4f46e5;
+            --ai-bubble: #1f2937;
+            --border: #374151;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Sidebar Drawer */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: var(--chat-bg);
+            border-right: 1px solid var(--border);
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            transition: left 0.3s ease;
+        }
+
+        #sidebar.open {
+            left: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .close-sidebar {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .sidebar-user-info {
+            padding: 14px 16px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .sidebar-user-info .name {
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .sidebar-user-info .email {
+            color: var(--text-muted);
+        }
+
+        .sidebar-history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .history-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .history-item:hover, .history-item.active {
+            background: var(--panel-bg);
+            color: var(--text-main);
+        }
+
+        .sidebar-footer {
+            padding: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .logout-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--danger);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Settings Modal */
+        #settingsModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.85);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .settings-card {
+            background-color: var(--chat-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .settings-card h3 {
+            font-size: 18px;
+            margin-bottom: 14px;
+            color: white;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        .settings-close {
+            float: right;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+        }
+
+        /* Sidebar backdrop overlay */
+        #sidebarOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 400;
+            display: none;
+        }
+        #sidebarOverlay.show {
+            display: block;
+        }
+
+        /* Main Header Layout */
+        header {
+            background-color: var(--chat-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-badge {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .brand-info h1 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-info p {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-action-btn, .new-chat-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .icon-action-btn:hover, .new-chat-btn:hover {
+            background: var(--border);
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            padding-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 90%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            margin-left: auto;
+            align-items: flex-end;
+        }
+
+        .message.ai {
+            margin-right: auto;
+            align-items: flex-start;
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+            position: relative;
+        }
+
+        .message.user .bubble {
+            background-color: var(--user-bubble);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai .bubble {
+            background-color: var(--ai-bubble);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Message Action Buttons Bar */
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 0 4px;
+        }
+
+        .msg-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.2s;
+        }
+
+        .msg-action-btn:hover {
+            color: var(--text-main);
+        }
+
+        /* Markdown Styling Inside AI Bubbles */
+        .bubble p { margin-bottom: 10px; }
+        .bubble p:last-child { margin-bottom: 0; }
+        .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 10px; }
+        .bubble li { margin-bottom: 4px; }
+        .bubble code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+        
+        /* Code block wrapper with top copy button */
+        .code-block-wrapper {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #161f33;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-family: monospace;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .code-copy-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .code-copy-btn:hover {
+            background: var(--accent);
+        }
+        .bubble pre {
+            padding: 12px;
+            overflow-x: auto;
+            margin: 0;
+        }
+        .bubble pre code { background: transparent; padding: 0; }
+        .bubble strong { color: #ffffff; font-weight: 600; }
+
+        /* Attachment Preview Bar above input */
+        #attachmentPreviewBox {
+            display: none;
+            padding: 8px 12px;
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border);
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .input-area {
+            background-color: var(--chat-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .input-wrapper-container {
+            padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 15px));
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-wrapper {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            gap: 8px;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 6px 10px;
+            align-items: center;
+        }
+
+        .attach-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .attach-btn:hover {
+            color: var(--text-main);
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 14px;
+            resize: none;
+            max-height: 100px;
+            outline: none;
+            padding: 4px;
+            line-height: 1.4;
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        button.send-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        button.send-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button.send-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .typing-indicator span {
+            height: 7px;
+            width: 7px;
+            float: left;
+            margin: 0 2px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.3s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: -1.1s; }
+        .typing-indicator span:nth-child(3) { animation-delay: -0.9s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal">
+        <div class="settings-card">
+            <button class="settings-close" onclick="toggleSettings()">&times;</button>
+            <h3>KLASH AI Settings</h3>
+            <div class="form-group" style="margin-top:15px;">
+                <label>Mode</label>
+                <input type="text" value="Local Storage Mode (Personal Context Active)" disabled style="opacity: 0.7;">
+            </div>
+            <div class="form-group">
+                <label>Active Models & Tools</label>
+                <input type="text" value="Groq Vision + Web Search Enabled" disabled style="opacity: 0.7;">
+            </div>
+            <button onclick="toggleSettings()" style="margin-top:10px; width:100%; background:var(--accent); color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">Close Settings</button>
+        </div>
+    </div>
+
+    <!-- Sidebar Drawer for Chat History & Navigation -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h3>Chat History</h3>
+            <button class="close-sidebar" onclick="toggleSidebar()">&times;</button>
+        </div>
+        <div class="sidebar-user-info">
+            <div class="name">Rufai Ikhlas Ajibola (KLASH)</div>
+            <div class="email">KLASH WORLD Ecosystem</div>
+        </div>
+        <div class="sidebar-history-list" id="sidebarHistoryList">
+            <!-- History threads rendered dynamically -->
+        </div>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="clearAllHistory()">Clear All History</button>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header>
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()" title="Toggle Menu">⋮⋮</button>
+            <div class="brand">
+                <div class="logo-badge">K</div>
+                <div class="brand-info">
+                    <h1>KLASH AI</h1>
+                    <p>Engineered by KLASH WORLD</p>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="icon-action-btn" onclick="toggleSettings()" title="Settings">⚙️ Settings</button>
+            <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
+        </div>
+    </header>
+
+    <!-- Chat Messages Container -->
+    <div class="chat-container" id="chatContainer">
+        <div class="message ai">
+            <div class="bubble">
+                Hello Ikhlas! I am KLASH AI, your elite assistant engineered by Rufai Ikhlas Ajibola (KLASH WORLD). I have your full profile—from your music release <em>BLESSING</em> and <em>KLASH CODING ACADEMY</em> to your law/JUPEB studies at Osun State University and your close bond with Zahra. How can I help you today?
+            </div>
+        </div>
+    </div>
+
+    <!-- User Input Area -->
+    <div class="input-area">
+        <!-- Attachment Preview Bar -->
+        <div id="attachmentPreviewBox">
+            <span id="attachmentInfo">Attached file</span>
+            <button onclick="clearAttachment()" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold; margin-left:auto;">&times; Remove</button>
+        </div>
+
+        <div class="input-wrapper-container">
+            <div class="input-wrapper">
+                <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.md,.csv,.json,.html,.css,.js,.py" style="display:none;" onchange="handleFileSelect(event)" />
+                <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Upload Image or Document">📎</button>
+                <textarea id="userInput" rows="1" placeholder="Ask anything, search the web, or upload a file..."></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic Script -->
+    <script>
+        const API_KEY = "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";
+        const VISION_MODEL = "qwen/qwen3.8-27b";
+        const SEARCH_MODEL = "openai/gpt-oss-120b";
+
+        let currentChatId = null;
+        let allChats = [];
+        let attachedFilePayload = null;
+
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const settingsModal = document.getElementById('settingsModal');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadChatsFromLocalStorage();
+        });
+
+        window.toggleSidebar = function() {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('show');
+        };
+
+        window.toggleSettings = function() {
+            settingsModal.style.display = settingsModal.style.display === 'flex' ? 'none' : 'flex';
+        };
+
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                window.sendMessage();
+            }
+        });
+
+        window.handleFileSelect = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const previewBox = document.getElementById('attachmentPreviewBox');
+            const attachInfo = document.getElementById('attachmentInfo');
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    attachedFilePayload = { type: 'image', data: e.target.result, name: file.name };
+                    attachInfo.innerHTML = `🖼️ Image attached: <strong>${file.name}</strong>`;
+                    previewBox.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                attachInfo.innerHTML = `⏳ Reading PDF: <strong>${file.name}</strong>...`;
+                previewBox.style.display = 'flex';
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    let extractedText = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        extractedText += textContent.items.map(item => item.str).join(' ') + "\n";
+                    }
+                    attachedFilePayload = { type: 'text', data: `[Attached PDF Document: ${file.name}]\n${extractedText}`, name: file.name };
+                    attachInfo.innerHTML = `📄 PDF attached: <strong>${file.name}</strong>`;
+                } catch (err) {
+                    console.error("PDF parse error:", err);
+                    alert("Failed to parse PDF file.");
+                    clearAttachment();
+                }
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    attachedFilePayload = { type: 'text', data: `[Attached File: ${file.name}]\n${e.target.result}`, name: file.name };
+                    attachInfo.innerHTML = `📄 File attached: <strong>${file.name}</strong>`;
+                    previewBox.style.display = 'flex';
+                };
+                reader.readAsText(file);
+            }
+        };
+
+        window.clearAttachment = function() {
+            attachedFilePayload = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('attachmentPreviewBox').style.display = 'none';
+        };
+
+        window.copyToClipboard = function(text, btnElement) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btnElement.textContent;
+                btnElement.textContent = "Copied!";
+                setTimeout(() => btnElement.textContent = originalText, 2000);
+            });
+        };
+
+        window.speakText = function(text) {
+            if (!('speechSynthesis' in window)) {
+                console.warn("Speech synthesis not supported.");
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const cleanText = text.replace(/[*#_`[\]()]/g, '');
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.rate = 1.0;
+            let voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                utterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+            }
+            window.speechSynthesis.speak(utterance);
+        };
+
+        function loadChatsFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('klash_ai_chats');
+                if (saved) {
+                    allChats = JSON.parse(saved);
+                }
+            } catch (e) {
+                allChats = [];
+            }
+
+            if (allChats.length === 0) {
+                window.startNewChat();
+            } else {
+                window.loadChat(allChats[0].id);
+            }
+            renderSidebarHistory();
+        }
+
+        function saveChatsToLocalStorage() {
+            try {
+                localStorage.setItem('klash_ai_chats', JSON.stringify(allChats));
+            } catch (e) {
+                console.error("Storage error:", e);
+            }
+        }
+
+        window.startNewChat = function() {
+            const newChat = {
+                id: 'chat_' + Date.now(),
+                title: 'New Conversation',
+                messages: []
+            };
+
+            allChats.unshift(newChat);
+            currentChatId = newChat.id;
+            saveChatsToLocalStorage();
+
+            chatContainer.innerHTML = `
+                <div class="message ai">
+                    <div class="bubble">
+                        Hello Ikhlas! I am KLASH AI, your assistant engineered by Rufai Ikhlas Ajibola (KLASH WORLD). How can I assist you today?
+                    </div>
+                </div>
+            `;
+            renderSidebarHistory();
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        };
+
+        window.loadChat = function(id) {
+            currentChatId = id;
+            const chat = allChats.find(c => c.id === id);
+            if (!chat) return;
+
+            chatContainer.innerHTML = '';
+            chat.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    appendUserMessageUI(msg.displayText || (typeof msg.content === 'string' ? msg.content : 'Image attachment'));
+                } else if (msg.role === 'assistant') {
+                    if (msg.isImage) {
+                        appendImageMessageUI(msg.prompt, msg.imageUrl);
+                    } else {
+                        appendAIMessageUI(msg.content);
+                    }
+                }
+            });
+            renderSidebarHistory();
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        };
+
+        window.clearAllHistory = function() {
+            if (confirm("Are you sure you want to clear all chat history?")) {
+                localStorage.removeItem('klash_ai_chats');
+                allChats = [];
+                window.startNewChat();
+            }
+        };
+
+        function renderSidebarHistory() {
+            const list = document.getElementById('sidebarHistoryList');
+            list.innerHTML = '';
+            allChats.forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
+                item.textContent = chat.title;
+                item.onclick = () => window.loadChat(chat.id);
+                list.appendChild(item);
+            });
+        }
+
+        function appendUserMessageUI(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'bubble';
+            bubbleDiv.textContent = text;
+            
+            messageDiv.appendChild(bubbleDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendAIMessageUI(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'bubble';
+            
+            let parsedHtml = marked.parse(text);
+            bubbleDiv.innerHTML = parsedHtml;
+
+            bubbleDiv.querySelectorAll('pre').forEach((pre) => {
+                const codeEl = pre.querySelector('code');
+                const rawCode = codeEl ? codeEl.innerText : pre.innerText;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+                
+                const header = document.createElement('div');
+                header.className = 'code-header';
+                header.innerHTML = `<span>Code Snippet</span>`;
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'code-copy-btn';
+                copyBtn.textContent = 'Copy Code';
+                copyBtn.onclick = () => copyToClipboard(rawCode, copyBtn);
+                
+                header.appendChild(copyBtn);
+                wrapper.appendChild(header);
+                pre.parentNode.replaceChild(wrapper, pre);
+                wrapper.appendChild(pre);
+            });
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'msg-action-btn';
+            copyBtn.innerHTML = '📋 Copy';
+            copyBtn.onclick = () => copyToClipboard(text, copyBtn);
+
+            const speakBtn = document.createElement('button');
+            speakBtn.className = 'msg-action-btn';
+            speakBtn.innerHTML = '🔊 Listen';
+            speakBtn.onclick = () => speakText(text);
+
+            actionsDiv.appendChild(copyBtn);
+            actionsDiv.appendChild(speakBtn);
+
+            messageDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(actionsDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendImageMessageUI(promptText, imageUrl) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'bubble';
+            bubbleDiv.innerHTML = `
+                <p style="margin-bottom:8px; font-size:12px; color:#9ca3af;">🎨 Generated Image: <strong>${promptText}</strong></p>
+                <img src="${imageUrl}" alt="${promptText}" style="width:100%; max-width:360px; border-radius:8px; display:block; margin-bottom:8px;" onload="chatContainer.scrollTop = chatContainer.scrollHeight" />
+                <a href="${imageUrl}" target="_blank" download="klash-ai-art.jpg" style="display:inline-block; background:#6366f1; color:white; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:12px;">⬇ Open / Save Image</a>
+            `;
+
+            messageDiv.appendChild(bubbleDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'message ai';
+            div.id = 'typingIndicator';
+            div.innerHTML = `<div class="bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        window.sendMessage = async function() {
+            const text = userInput.value.trim();
+            if (!text && !attachedFilePayload) return;
+
+            userInput.value = '';
+            userInput.style.height = 'auto';
+
+            let displayUserText = text;
+            if (attachedFilePayload) {
+                displayUserText += ` [Attached: ${attachedFilePayload.name}]`;
+            }
+
+            appendUserMessageUI(displayUserText);
+            
+            const chat = allChats.find(c => c.id === currentChatId);
+            if (!chat) return;
+
+            const now = new Date().toLocaleString("en-NG", {
+                weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short"
+            });
+
+            // Embedded Personal & Professional Context
+            const systemPrompt = `You are KLASH AI, a proprietary artificial intelligence created, owned, and engineered solely by Rufai Ikhlas Ajibola (known professionally as KLASH or KLASH WORLD), living and operating in Osogbo, Osun State, Nigeria. 
+User Profile & Context:
+- Full Name: Rufai Ikhlas Ajibola (Artist name: KLASH / KLASH WORLD).
+- Profession/Interests: Independent music artist, songwriter (Afrobeats/Afro-Adura/street-pop, single release: "BLESSING"), self-taught mobile software & web developer using Android tools (Acode, Termux, GitHub), creator of KLASH CODING ACADEMY on YouTube.
+- Academics: Studying at Osun State University, preparing for JUPEB examinations (Literature in English and Government) with plans to pursue a law degree.
+- Personal Relationships: Close friend and classmate Yusuf Fatimatuzahra (Zahra / Mummy Zee Mango), whom he cares for deeply and respects as a close friend.
+Current real-time date and time: ${now}. Format responses cleanly using Markdown.`;
+
+            let apiContent;
+            let historyStorageContent;
+            let modelToUse = SEARCH_MODEL;
+
+            if (attachedFilePayload && attachedFilePayload.type === 'image') {
+                modelToUse = VISION_MODEL;
+                apiContent = [
+                    { type: "text", text: text || "Describe or analyze this image." },
+                    { type: "image_url", image_url: { url: attachedFilePayload.data } }
+                ];
+                historyStorageContent = text || "[Image attachment]";
+            } else if (attachedFilePayload && attachedFilePayload.type === 'text') {
+                apiContent = `${text}\n\n${attachedFilePayload.data}`;
+                historyStorageContent = apiContent;
+            } else {
+                apiContent = text;
+                historyStorageContent = text;
+            }
+
+            // Push clean string to persistent history to avoid Groq validation errors on multi-turn history
+            chat.messages.push({ role: "user", content: historyStorageContent, displayText: displayUserText, apiPayload: apiContent });
+            
+            if (chat.title === 'New Conversation') {
+                chat.title = text.length > 25 ? text.substring(0, 25) + '...' : (attachedFilePayload ? attachedFilePayload.name : 'Conversation');
+            }
+            
+            clearAttachment();
+            saveChatsToLocalStorage();
+            renderSidebarHistory();
+
+            if (/^(\/imagine|generate an image|create an image|draw)\b/i.test(text)) {
+                const cleanPrompt = text.replace(/^(\/imagine|generate an image of|create an image of|draw)\s*/i, '').trim();
+                const seed = Math.floor(Math.random() * 100000);
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true`;
+
+                showTyping();
+                setTimeout(() => {
+                    removeTyping();
+                    appendImageMessageUI(cleanPrompt, imageUrl);
+                    chat.messages.push({ role: "assistant", content: `[Generated Image: ${cleanPrompt}]`, isImage: true, prompt: cleanPrompt, imageUrl: imageUrl });
+                    saveChatsToLocalStorage();
+                }, 800);
+                return;
+            }
+
+            showTyping();
+
+            // Format messages for Groq API call, using the rich apiPayload if it was an image attachment on the latest turn
+            const formattedMessages = chat.messages.map((m, index) => {
+                const isLast = index === chat.messages.length - 1;
+                return {
+                    role: m.role,
+                    content: (isLast && m.apiPayload) ? m.apiPayload : m.content
+                };
+            });
+
+            const requestBody = {
+                model: modelToUse,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    ...formattedMessages
+                ],
+                temperature: 0.7,
+                max_tokens: 1500
+            };
+
+            if (modelToUse === SEARCH_MODEL) {
+                requestBody.tools = [{ type: "browser_search" }];
+                requestBody.tool_choice = "auto";
+            }
+
+            try {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${API_KEY.trim()}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                removeTyping();
+
+                if (data.error) {
+                    console.error("Groq API Error:", data.error);
+                    appendAIMessageUI(`API Error: ${data.error.message || 'Check console details'}`);
+                } else if (data.choices && data.choices.length > 0) {
+                    const aiReply = data.choices[0].message.content;
+                    appendAIMessageUI(aiReply);
+                    chat.messages.push({ role: "assistant", content: aiReply });
+                    saveChatsToLocalStorage();
+                } else {
+                    appendAIMessageUI("Error: Received an invalid response structure.");
+                }
+            } catch (err) {
+                removeTyping();
+                console.error("Network Exception:", err);
+                appendAIMessageUI("Network error or connection issue.");
+            }
+        };
+    </script>
+</body>
+</html>
